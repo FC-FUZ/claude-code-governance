@@ -67,6 +67,20 @@ OUTCOMES = [
 ]
 
 
+def get_contributor():
+    """Get contributor ID for log attribution.
+
+    Fallback chain: SUPERMEMORY_USER env → os.getlogin() → 'claude_code'
+    """
+    user = os.environ.get("SUPERMEMORY_USER")
+    if user:
+        return user
+    try:
+        return os.getlogin()
+    except OSError:
+        return "claude_code"
+
+
 # ---------------------------------------------------------------------------
 # Log file helpers (JSONL format)
 # ---------------------------------------------------------------------------
@@ -623,6 +637,7 @@ def cmd_log(args):
         "id": entry_id,
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "consultation_type": consultation_type,
+        "contributor": get_contributor(),
         "bug_type": bug_type,
         "context_summary": args.context,
         "attempt_number": args.attempt,
@@ -846,12 +861,13 @@ def _do_sync(project_dir, entries=None):
 
     stats = aggregate_log(entries)
 
-    # Detect project name from directory
+    # Detect project name and contributor
     project_name = Path(project_dir).resolve().name
+    contributor = get_contributor()
 
     # Build structured insight content
     lines = [
-        f"Council Performance Insights — {project_name}",
+        f"Council Performance Insights — {project_name} (contributor: {contributor})",
         f"Total consultations: {stats['total']}",
         f"Bug fixes: {stats['by_type'].get('bug_fix', 0)}, Plan validations: {stats['by_type'].get('plan_validation', 0)}",
         "",
@@ -910,7 +926,7 @@ def _do_sync(project_dir, entries=None):
                 "--content", content,
                 "--container", "council_insights",
                 "--type", "pattern",
-                "--tags", f"council,model-performance,{project_name}",
+                "--tags", f"council,model-performance,{project_name},{contributor}",
             ],
             capture_output=True,
             text=True,
