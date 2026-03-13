@@ -241,16 +241,7 @@ def _resolve_provider_bucket(model_id, tracked_providers):
     if len(candidates) == 1:
         return candidates[0]
 
-    # Multiple candidates — route based on model name heuristics
-    mid = model_id.lower()
-    if prefix == "openai":
-        if "codex" in mid:
-            return "openai-codex"
-        if "pro" in mid and "-mini" not in mid:
-            return "openai-pro"
-        return "openai-codex"  # default bucket for other openai models
-
-    # Fallback: return first candidate
+    # Multiple candidates — return first match
     return candidates[0]
 
 
@@ -446,7 +437,6 @@ def cmd_update(args):
     # These must match as substrings in the model ID (after the provider prefix)
     flagship_patterns = {
         "openai-codex": ["codex", "gpt-5", "gpt-4", "o4", "o3"],
-        "openai-pro": ["gpt-5.4", "gpt-5-pro", "pro", "gpt-5", "gpt-4"],
         "google": ["gemini-3", "gemini-2.5", "gemini-2", "gemini-1.5"],
         "anthropic": ["opus", "sonnet"],
         "moonshotai": ["kimi-k2.5", "kimi-k2", "kimi"],

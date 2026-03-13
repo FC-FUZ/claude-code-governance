@@ -19,7 +19,7 @@ Track your own bug fix attempts within each conversation. A "failed attempt" = t
 
 **After the 2nd failed attempt at the same bug, you MUST STOP and do ALL of this before trying a 3rd fix:**
 
-1. Announce to the user: "Invoking the council — 2 fix attempts have failed. Consulting GPT-5.4 Pro, Codex, Gemini, and Kimi before trying again."
+1. Announce to the user: "Invoking the council — 2 fix attempts have failed. Consulting Codex, Gemini, and Kimi before trying again."
 2. Run this command (fill in the bracketed sections with actual context from the conversation):
 ```bash
 python ~/.claude/skills/council/scripts/council.py consult --fan-out --context "BUG: [describe the bug/error]
@@ -45,7 +45,7 @@ python ~/.claude/skills/council/scripts/council.py log \
   --bug-type "[classify: runtime_error|type_error|logic_error|import_error|config_error|api_error|ui_bug|state_bug|async_error|test_failure|build_error|other]" \
   --context "[brief bug description]" \
   --attempt 3 \
-  --models '[{"model_id":"openai/gpt-5.3-codex","recommendation_summary":"[1-2 sentence summary]","verdict":"[valid|partial|invalid]","adopted":[true|false],"strengths":["[specific strength]"],"weaknesses":["[specific weakness]"]},{"model_id":"openai/gpt-5.4-pro","recommendation_summary":"[1-2 sentence summary]","verdict":"[valid|partial|invalid]","adopted":[true|false],"strengths":["[specific]"],"weaknesses":["[specific]"]},{"model_id":"google/gemini-3.1-pro-preview","recommendation_summary":"[1-2 sentence summary]","verdict":"[valid|partial|invalid]","adopted":[true|false],"strengths":["[specific]"],"weaknesses":["[specific]"]},{"model_id":"moonshotai/kimi-k2.5","recommendation_summary":"[1-2 sentence summary]","verdict":"[valid|partial|invalid]","adopted":[true|false],"strengths":["[specific]"],"weaknesses":["[specific]"]}]' \
+  --models '[{"model_id":"openai/gpt-5.3-codex","recommendation_summary":"[1-2 sentence summary]","verdict":"[valid|partial|invalid]","adopted":[true|false],"strengths":["[specific strength]"],"weaknesses":["[specific weakness]"]},{"model_id":"google/gemini-3.1-pro-preview","recommendation_summary":"[1-2 sentence summary]","verdict":"[valid|partial|invalid]","adopted":[true|false],"strengths":["[specific]"],"weaknesses":["[specific]"]},{"model_id":"moonshotai/kimi-k2.5","recommendation_summary":"[1-2 sentence summary]","verdict":"[valid|partial|invalid]","adopted":[true|false],"strengths":["[specific]"],"weaknesses":["[specific]"]}]' \
   --outcome pending
 ```
 Note the returned UUID — you will need it for the outcome update.
@@ -85,7 +85,7 @@ python ~/.claude/skills/council/scripts/council.py log \
   --project-dir "$(pwd)" \
   --type plan_validation \
   --context "[brief plan description]" \
-  --models '[{"model_id":"openai/gpt-5.3-codex","recommendation_summary":"[1-2 sentence summary]","verdict":"[valid|partial|invalid]","adopted":[true|false],"strengths":["[specific]"],"weaknesses":["[specific]"]},{"model_id":"openai/gpt-5.4-pro","recommendation_summary":"[1-2 sentence summary]","verdict":"[valid|partial|invalid]","adopted":[true|false],"strengths":["[specific]"],"weaknesses":["[specific]"]},{"model_id":"google/gemini-3.1-pro-preview","recommendation_summary":"[1-2 sentence summary]","verdict":"[valid|partial|invalid]","adopted":[true|false],"strengths":["[specific]"],"weaknesses":["[specific]"]},{"model_id":"moonshotai/kimi-k2.5","recommendation_summary":"[1-2 sentence summary]","verdict":"[valid|partial|invalid]","adopted":[true|false],"strengths":["[specific]"],"weaknesses":["[specific]"]}]' \
+  --models '[{"model_id":"openai/gpt-5.3-codex","recommendation_summary":"[1-2 sentence summary]","verdict":"[valid|partial|invalid]","adopted":[true|false],"strengths":["[specific]"],"weaknesses":["[specific]"]},{"model_id":"google/gemini-3.1-pro-preview","recommendation_summary":"[1-2 sentence summary]","verdict":"[valid|partial|invalid]","adopted":[true|false],"strengths":["[specific]"],"weaknesses":["[specific]"]},{"model_id":"moonshotai/kimi-k2.5","recommendation_summary":"[1-2 sentence summary]","verdict":"[valid|partial|invalid]","adopted":[true|false],"strengths":["[specific]"],"weaknesses":["[specific]"]}]' \
   --outcome [plan_improved|plan_unchanged]
 ```
 6. Write the revised plan to the plan file with a "Council Review" section noting what changed
@@ -104,7 +104,6 @@ Use these insights to inform your verdict assessment. For example:
 - If Codex historically struggles with `ui_bug` (low valid rate), weight its UI recommendations more skeptically
 - If Gemini excels at `async_error`, give its async debugging advice higher credibility
 - If Kimi K2.5 shows strength in `logic_error`, give its reasoning higher weight
-- If GPT-5.4 Pro tends to over-engineer fixes, watch for that tendency
 
 **Verdict guidelines — be honest, not generous:**
 - `valid`: The model correctly identified the root cause or gave actionable, correct advice

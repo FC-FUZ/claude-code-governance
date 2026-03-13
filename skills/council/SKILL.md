@@ -49,7 +49,6 @@ User names a specific model or provider.
 **Provider shortcuts (auto-resolved to current flagship):**
 - "Gemini" / "Google" → current Google flagship
 - "Codex" / "GPT53" → OpenAI Codex flagship
-- "GPT54" / "GPT-Pro" / "GPT5Pro" → OpenAI Pro flagship
 - "GPT" / "OpenAI" / "ChatGPT" → OpenAI Codex flagship (default)
 - "Kimi" / "Moonshot" / "K2" → current MoonshotAI flagship
 - "Claude" / "Anthropic" → current Anthropic flagship
@@ -102,7 +101,7 @@ Track bug fix attempts within a conversation. A "failed attempt" means: the fix 
 
 **After the 2nd failed attempt at fixing the same bug/error, STOP and do this before attempting a 3rd fix:**
 
-1. Announce: "Invoking the council — 2 fix attempts have failed. Consulting GPT-5.4 Pro, Codex, Gemini, and Kimi before trying again."
+1. Announce: "Invoking the council — 2 fix attempts have failed. Consulting Codex, Gemini, and Kimi before trying again."
 2. Package context for the council:
    - The bug/error description
    - What was tried in attempt 1 and attempt 2 (code changes + results)
@@ -172,7 +171,7 @@ Infer the category from conversation context using these mappings:
 | `general` | Gemini 3.1 Pro | Default fallback for anything else |
 | `quick_check` | Gemini 3.0 Flash | Quick, fast, simple verification |
 
-**Fan-out models** (consulted via `--fan-out`): OpenAI Codex, GPT-5.4 Pro, Gemini 3.1 Pro, Kimi K2.5
+**Fan-out models** (consulted via `--fan-out`): OpenAI Codex, Gemini 3.1 Pro, Kimi K2.5
 
 ## Context Packaging
 
