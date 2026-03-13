@@ -1,0 +1,147 @@
+{
+  "providers": [
+    {
+      "id": "openai-codex",
+      "name": "OpenAI Codex",
+      "flagship": "openai/gpt-5.3-codex",
+      "aliases": [
+        "gpt",
+        "codex",
+        "openai",
+        "chatgpt",
+        "gpt53"
+      ]
+    },
+    {
+      "id": "openai-pro",
+      "name": "OpenAI Pro",
+      "flagship": "openai/gpt-5.4-pro",
+      "aliases": [
+        "gpt54",
+        "gpt-pro",
+        "gpt5pro"
+      ]
+    },
+    {
+      "id": "google",
+      "name": "Google",
+      "flagship": "google/gemini-3.1-pro-preview",
+      "aliases": [
+        "gemini",
+        "google",
+        "bard"
+      ]
+    },
+    {
+      "id": "anthropic",
+      "name": "Anthropic",
+      "flagship": "anthropic/claude-opus-4.6",
+      "aliases": [
+        "claude",
+        "anthropic"
+      ]
+    },
+    {
+      "id": "moonshotai",
+      "name": "MoonshotAI",
+      "flagship": "moonshotai/kimi-k2.5",
+      "aliases": [
+        "kimi",
+        "moonshot",
+        "moonshotai",
+        "k2"
+      ]
+    }
+  ],
+  "defaults": {
+    "bug_fix": "openai/gpt-5.3-codex",
+    "frontend": "google/gemini-3.1-pro-preview",
+    "architecture": "anthropic/claude-opus-4.6",
+    "refactor": "openai/gpt-5.3-codex",
+    "general": "google/gemini-3.1-pro-preview",
+    "quick_check": "google/gemini-3-flash-preview"
+  },
+  "fan_out": [
+    "openai/gpt-5.3-codex",
+    "openai/gpt-5.4-pro",
+    "google/gemini-3.1-pro-preview",
+    "moonshotai/kimi-k2.5"
+  ],
+  "categories": {
+    "bug_fix": {
+      "description": "Bug fixes, error diagnosis, debugging",
+      "keywords": [
+        "bug",
+        "fix",
+        "error",
+        "crash",
+        "broken",
+        "failing",
+        "debug",
+        "issue",
+        "wrong",
+        "not working"
+      ]
+    },
+    "frontend": {
+      "description": "UI/UX, frontend design, CSS, React, web pages",
+      "keywords": [
+        "frontend",
+        "UI",
+        "UX",
+        "design",
+        "CSS",
+        "React",
+        "component",
+        "layout",
+        "page",
+        "style",
+        "responsive",
+        "web"
+      ]
+    },
+    "architecture": {
+      "description": "System design, architecture, patterns, structure",
+      "keywords": [
+        "architecture",
+        "design",
+        "structure",
+        "pattern",
+        "system",
+        "scale",
+        "database",
+        "API",
+        "schema",
+        "organize"
+      ]
+    },
+    "refactor": {
+      "description": "Code refactoring, cleanup, optimization",
+      "keywords": [
+        "refactor",
+        "clean",
+        "optimize",
+        "simplify",
+        "restructure",
+        "DRY",
+        "extract",
+        "rename",
+        "split"
+      ]
+    },
+    "general": {
+      "description": "General questions, broad advice",
+      "keywords": []
+    },
+    "quick_check": {
+      "description": "Fast, low-stakes questions",
+      "keywords": [
+        "quick",
+        "fast",
+        "simple",
+        "check",
+        "verify"
+      ]
+    }
+  }
+}
