@@ -29,11 +29,13 @@ Usage:
 """
 
 import argparse
+import concurrent.futures
 import io
 import json
 import os
 import subprocess
 import sys
+import time
 import urllib.request
 import urllib.error
 import uuid
@@ -330,8 +332,21 @@ def get_fan_out_models():
     return config.get("fan_out", [])
 
 
-def consult_model(model_id, context, system_prompt=None):
-    """Send a consultation request to a model via OpenRouter."""
+def get_model_timeout(model_id):
+    """Get the configured timeout for a specific model."""
+    config = load_config()
+    timeouts = config.get("timeouts", {})
+    return timeouts.get(model_id, timeouts.get("default", 120))
+
+
+def consult_model(model_id, context, system_prompt=None, timeout=None):
+    """Send a consultation request to a model via OpenRouter.
+
+    Always returns a result dict — never raises for network/API errors.
+    """
+    if timeout is None:
+        timeout = get_model_timeout(model_id)
+
     api_key = get_api_key()
 
     messages = []
@@ -351,9 +366,17 @@ def consult_model(model_id, context, system_prompt=None):
     req.add_header("HTTP-Referer", "https://claude-code-council.local")
     req.add_header("X-Title", "Claude Code Council")
 
+    _error = lambda msg: {
+        "model": model_id,
+        "content": msg,
+        "usage": {"prompt_tokens": 0, "completion_tokens": 0},
+    }
+
     try:
-        with urllib.request.urlopen(req, timeout=120) as resp:
+        t0 = time.monotonic()
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
             data = json.loads(resp.read().decode())
+        elapsed = time.monotonic() - t0
         choice = data.get("choices", [{}])[0]
         message = choice.get("message", {})
         content = message.get("content", "")
@@ -366,14 +389,15 @@ def consult_model(model_id, context, system_prompt=None):
                 "prompt_tokens": usage.get("prompt_tokens", 0),
                 "completion_tokens": usage.get("completion_tokens", 0),
             },
+            "elapsed_s": round(elapsed, 1),
         }
     except urllib.error.HTTPError as e:
         error_body = e.read().decode() if e.fp else ""
-        return {
-            "model": model_id,
-            "content": f"ERROR ({e.code}): {error_body}",
-            "usage": {"prompt_tokens": 0, "completion_tokens": 0},
-        }
+        return _error(f"ERROR ({e.code}): {error_body}")
+    except (urllib.error.URLError, TimeoutError, OSError) as e:
+        return _error(f"TIMEOUT/CONNECTION ERROR: {e}")
+    except Exception as e:
+        return _error(f"UNEXPECTED ERROR: {type(e).__name__}: {e}")
 
 
 def cmd_models(args):
@@ -509,13 +533,29 @@ def cmd_consult(args):
     )
 
     if args.fan_out:
-        # Fan out to all competitor models
+        # Fan out to all competitor models concurrently
         models = get_fan_out_models()
-        print(f"\n--- COUNCIL: Consulting {len(models)} models ---\n")
+        print(f"\n--- COUNCIL: Consulting {len(models)} models (concurrent) ---\n")
+        for mid in models:
+            print(f">> Queuing {mid} (timeout: {get_model_timeout(mid)}s)")
+
+        results = {}
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(models)) as executor:
+            futures = {
+                executor.submit(consult_model, mid, context, system_prompt): mid
+                for mid in models
+            }
+            for future in concurrent.futures.as_completed(futures):
+                mid = futures[future]
+                results[mid] = future.result()
+                elapsed = results[mid].get("elapsed_s", "?")
+                print(f"<< {mid} responded ({elapsed}s)")
+
+        # Print results in original model order
+        print()
         for model_id in models:
-            print(f">> Asking {model_id}...")
-            result = consult_model(model_id, context, system_prompt)
-            print(f"\n{'='*60}")
+            result = results[model_id]
+            print(f"{'='*60}")
             print(f"  MODEL: {result['model']}")
             print(f"  TOKENS: {result['usage']['prompt_tokens']} in / {result['usage']['completion_tokens']} out")
             print(f"{'='*60}")

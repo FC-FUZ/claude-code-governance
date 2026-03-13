@@ -67,6 +67,10 @@
     "google/gemini-3.1-pro-preview",
     "moonshotai/kimi-k2.5"
   ],
+  "timeouts": {
+    "default": 120,
+    "openai/gpt-5.4-pro": 240
+  },
   "categories": {
     "bug_fix": {
       "description": "Bug fixes, error diagnosis, debugging",
