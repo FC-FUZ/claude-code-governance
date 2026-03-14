@@ -7,8 +7,8 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Works with Claude Code](https://img.shields.io/badge/Works%20with-Claude%20Code-blueviolet)](https://docs.anthropic.com/en/docs/claude-code)
-[![Hooks: SessionStart + PreCompact](https://img.shields.io/badge/Hooks-SessionStart%20%2B%20PreCompact-green)]()
-[![Models: Claude + GPT + Gemini](https://img.shields.io/badge/Models-Claude%20%2B%20GPT%20%2B%20Gemini-orange)]()
+[![Hooks: 5 Event Types](https://img.shields.io/badge/Hooks-5%20Event%20Types-green)]()
+[![Models: Claude + GPT + Gemini + Kimi](https://img.shields.io/badge/Models-Claude%20%2B%20GPT%20%2B%20Gemini%20%2B%20Kimi-orange)]()
 
 ---
 
@@ -16,14 +16,14 @@
 
 Claude Code is the best AI coding assistant available — but long sessions have a fatal flaw: **context compaction silently destroys your work-in-progress state.** You're mid-refactor across 8 files, the context window fills up, Claude summarizes... and your task context, decisions, and next steps are gone. Start a new session and Claude has zero memory of what you were building 5 minutes ago.
 
-**This framework fixes that** with automatic WIP checkpointing via Claude Code hooks, cross-session memory via Supermemory, multi-model second opinions via OpenRouter, and mandatory security gates for sensitive code — all wired into Claude Code's native settings system. No external tools to run. No manual steps. It just works.
+**This framework fixes that** with automatic WIP checkpointing via Claude Code hooks, cross-session memory via Supermemory, multi-model second opinions via OpenRouter, mandatory security gates for sensitive code, and browser verification that blocks UI changes until visually confirmed — all wired into Claude Code's native settings system with 7 hook scripts across 5 event types. No external tools to run. No manual steps. It just works.
 
 ---
 
 ## Highlights
 
 - **Never lose work to compaction again** — `PreCompact` hook automatically saves your task state before Claude's context window compresses. `SessionStart` hook restores it in your next session. Fully deterministic, zero manual intervention.
-- **Multi-model council breaks fix loops** — after 2 failed bug fix attempts, Claude automatically consults GPT and Gemini via OpenRouter before trying again. Plans get council-validated before execution. Every consultation is logged with performance tracking.
+- **Multi-model council breaks fix loops** — after 2 failed bug fix attempts, Claude automatically consults GPT Codex, Gemini, and Kimi K2.5 via OpenRouter before trying again. Plans get council-validated before execution. Every consultation is logged with performance tracking.
 - **Cross-project memory that actually persists** — architectural decisions, coding conventions, and project summaries are stored in Supermemory and queried automatically when planning new builds. Claude knows what you built last month.
 - **Security reviews you can't forget to run** — auth, crypto, SQL, and credential-handling code automatically triggers Trail of Bits analysis. Critical findings require multi-model validation before the fix ships.
 - **Graceful degradation, not graceful failure** — if Supermemory, OpenRouter, or Trail of Bits is down, the framework logs it, tells you, and keeps working. No service dependency blocks your session.
@@ -39,7 +39,7 @@ Claude Code is the best AI coding assistant available — but long sessions have
 | Context survives compaction | No — state is lost | Yes — automatic checkpoint + restore |
 | Cross-session memory | None | Full WIP recovery + company memory |
 | Bug fix assistance | Single model, can loop | Multi-model council after 2 failures |
-| Plan review | Self-review only | GPT + Gemini validate before execution |
+| Plan review | Self-review only | GPT + Gemini + Kimi validate before execution |
 | Security enforcement | Manual / opt-in | Automatic on sensitive code paths |
 | Frontend verification | "It compiles" = done | Browser screenshot required before completion |
 | Convention tracking | Per-session only | Persistent across all projects |
@@ -50,7 +50,7 @@ Nothing else in the Claude Code ecosystem combines hooks, multi-model orchestrat
 
 ## Installation
 
-**Requires:** [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code), Python 3.10+, [OpenRouter API key](https://openrouter.ai/)
+**Requires:** [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code), Python 3.10+, [OpenRouter API key](https://openrouter.ai/) | **Optional:** [Supermemory API key](https://supermemory.ai/) for cross-session memory
 
 ```bash
 # 1. Clone and install
@@ -121,16 +121,46 @@ Claude fails to fix a TypeError twice. On the 3rd attempt:
 
 ```
 Invoking the council — 2 fix attempts have failed.
-Consulting Gemini and Codex before trying again.
+Consulting Codex, Gemini, and Kimi before trying again.
 
 --- COUNCIL RESPONSE ---
 GPT Codex: "The issue is a race condition in the useEffect cleanup.
   The ref is captured at render time but the callback fires after unmount..."
 Gemini: "Agree with race condition diagnosis. Additionally, the dependency
   array is missing the callback ref..."
+Kimi K2.5: "Both are correct. The cleanup function also needs to cancel
+  the pending promise to prevent setState on unmounted component..."
 
-Synthesis: Both models identify the race condition. Gemini caught the
-  missing dependency. Applying combined fix...
+Synthesis: All three models identify the race condition. Gemini caught
+  the missing dependency, Kimi added the promise cancellation.
+  Applying combined fix...
+```
+
+### Browser Verification Gate
+
+Claude edits a React component and tries to report completion:
+
+```
+BLOCKED by Rule 7: Browser verification required.
+Frontend files modified:
+  - src/components/UserPanel.tsx
+
+You MUST verify with Playwright MCP before completing:
+1. Ensure dev server is running (e.g. npm run dev)
+2. browser_navigate to the local dev URL
+3. browser_screenshot of the affected view
+4. Report verification results using Rule 7d format
+```
+
+Claude navigates, screenshots, and catches a visual bug that TypeScript missed:
+
+```
+Browser Verification Report:
+  URL tested: http://localhost:5173
+  Screenshot taken: yes
+  Console errors: 0
+  Verdict: FAIL — Keycloak user shows "No roles assigned"
+    despite having admin role in realm_access.roles
 ```
 
 ### Security Gate
@@ -149,43 +179,50 @@ Finding: HIGH — JWT secret loaded from environment without validation
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    Claude Code CLI                       │
-│                                                         │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
-│  │ SessionStart │  │  PreCompact  │  │   CLAUDE.md  │  │
-│  │    Hook      │  │    Hook      │  │   (7 Rules)  │  │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  │
-│         │                 │                  │          │
-│         ▼                 ▼                  ▼          │
-│  ┌─────────────────────────────────────────────────┐    │
-│  │              Skills Layer                        │    │
-│  │  ┌───────────┐ ┌────────────┐ ┌──────────────┐  │    │
-│  │  ┌───────────┐ ┌────────────┐ ┌────────────┐  │    │
-│  │  │  Council   │ │ Supermemory│ │  Security  │  │    │
-│  │  │ (OpenRouter│ │ (Company   │ │ (Trail of  │  │    │
-│  │  │  fan-out)  │ │  Memory)   │ │  Bits)     │  │    │
-│  │  └─────┬─────┘ └─────┬──────┘ └─────┬──────┘  │    │
-│  └────────┼──────────────┼──────────────┼─────────┘    │
-│           ▼              ▼              ▼               │
-│    ┌────────────┐  ┌──────────┐  ┌─────────────┐      │
-│    │GPT / Gemini│  │Supermemory│  │Trail of Bits│      │
-│    │via OpenRouter│ │  API     │  │  Analyzers  │      │
-│    └────────────┘  └──────────┘  └─────────────┘      │
-│                                                        │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │           Browser Verification (Rule 7)          │   │
-│  │  PostToolUse → marks dirty │ Stop → blocks turn  │   │
-│  │  Playwright MCP / CLI for visual proof            │   │
-│  └─────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                      Claude Code CLI                          │
+│                                                              │
+│  ┌─────────────────────── Hooks Layer ─────────────────────┐ │
+│  │                                                         │ │
+│  │  SessionStart     PreCompact      PreToolUse            │ │
+│  │  └ rehydrate-wip  └ checkpoint-wip └ gate-fix-attempt   │ │
+│  │                                    └ gate-plan-exit     │ │
+│  │  PostToolUse      Stop                                  │ │
+│  │  └ mark-browser-  └ gate-browser-                       │ │
+│  │    verify-pending   verify                              │ │
+│  └────────────────────────┬────────────────────────────────┘ │
+│                           │                                  │
+│                           ▼                                  │
+│  ┌──────────────── Skills Layer ───────────────────────────┐ │
+│  │  ┌───────────┐  ┌────────────┐  ┌──────────────┐       │ │
+│  │  │  Council   │  │ Supermemory│  │  Security    │       │ │
+│  │  │ (OpenRouter│  │ (Company   │  │ (Trail of    │       │ │
+│  │  │  fan-out)  │  │  Memory)   │  │  Bits)       │       │ │
+│  │  └─────┬─────┘  └─────┬──────┘  └──────┬───────┘       │ │
+│  └────────┼───────────────┼────────────────┼───────────────┘ │
+│           ▼               ▼                ▼                 │
+│  ┌──────────────┐  ┌──────────┐  ┌──────────────┐           │
+│  │GPT / Gemini  │  │Supermemory│  │Trail of Bits │           │
+│  │/ Kimi via    │  │  API      │  │  Analyzers   │           │
+│  │OpenRouter    │  │           │  │              │           │
+│  └──────────────┘  └──────────┘  └──────────────┘           │
+│                                                              │
+│  ┌──────────── Browser Verification (Rule 7) ─────────────┐ │
+│  │  PostToolUse → marks frontend dirty                     │ │
+│  │  Stop → blocks turn until Playwright MCP evidence found │ │
+│  └─────────────────────────────────────────────────────────┘ │
+│                                                              │
+│  ┌──────────────── CLAUDE.md (7 Rules) ───────────────────┐ │
+│  │  Behavioral rules enforced via hooks + skill triggers   │ │
+│  └─────────────────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 ## The 7 Rules
 
 | # | Rule | Trigger | What It Does |
 |---|------|---------|-------------|
-| 1 | **Council Governance** | 2 failed bug fixes; plan finalization | Consults GPT + Gemini, logs model performance |
+| 1 | **Council Governance** | 2 failed bug fixes; plan finalization | Consults GPT + Gemini + Kimi, logs model performance |
 | 2 | **WIP Lifecycle** | Session start/end, compaction | Checkpoints and recovers work-in-progress state |
 | 3 | **Project Context & Synergy** | New build planning | Queries company memory, detects cross-project synergies |
 | 4 | **Convention Capture** | User states a decision | Stores architectural decisions with rationale |
@@ -251,7 +288,7 @@ claude-code-governance/
 ## FAQ
 
 **Q: Does this slow down Claude Code?**
-No. The `SessionStart` hook has a 5-second timeout and runs once at session start. The `PreCompact` hook runs only before compaction (rare). Neither blocks normal usage.
+No. The framework uses 7 hook scripts across 5 event types, each with tight timeouts (5-15 seconds). `SessionStart` runs once at session start. `PreCompact` runs only before compaction. `PreToolUse` hooks fire only on specific tools (Edit/Write for fix tracking, ExitPlanMode for council gate). `PostToolUse` runs a lightweight frontend-file check on Edit/Write. The `Stop` hook checks a single JSON state file. None block normal usage.
 
 **Q: What if I don't use Supermemory or OpenRouter?**
 The framework degrades gracefully. Without Supermemory, WIP recovery is disabled but everything else works. Without OpenRouter, the council is skipped and Claude works solo. No service is required — they all enhance.
@@ -260,7 +297,7 @@ The framework degrades gracefully. Without Supermemory, WIP recovery is disabled
 Yes. The governance rules go in your global `~/.claude/CLAUDE.md`. Project-specific rules in your repo's `CLAUDE.md` extend or override them. They compose, not conflict.
 
 **Q: How much does the council cost?**
-Each consultation makes 2 API calls via OpenRouter (one to GPT, one to Gemini). At typical token counts, this is $0.01-0.05 per consultation. The council only fires on failed bug fixes and plan validation — not on every message.
+Each consultation makes 3 API calls via OpenRouter (GPT Codex, Gemini, and Kimi K2.5 in parallel). At typical token counts, this is $0.02-0.08 per consultation. The council only fires on failed bug fixes and plan validation — not on every message.
 
 **Q: Will this work on Mac/Linux?**
 Yes. The hook scripts are standard bash. Tested on Windows (Git Bash), macOS, and Ubuntu.
@@ -273,8 +310,8 @@ PRs welcome — see [issues](https://github.com/FC-FUZ/claude-code-governance/is
 
 Key files to customize:
 1. `CLAUDE.md` — the behavioral rules
-2. `scripts/*.sh` — the hook implementations
-3. The skill directories — external service integrations
+2. `scripts/*.sh` and `scripts/*.py` — the hook implementations
+3. `skills/` — external service integrations (council, supermemory, security)
 
 ---
 
