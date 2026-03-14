@@ -217,6 +217,13 @@ claude-code-governance/
 │   │   └── scripts/council.py
 │   └── supermemory/                   # Company memory (Supermemory API)
 │       └── scripts/company_memory.py
+├── demo/
+│   ├── README.md                      # Recording script + setup guide
+│   ├── seed-wip.sh                    # Seeds all 7 demo states
+│   ├── auth-service/                  # Backend demo (Rules 1-6)
+│   │   └── src/auth/middleware.ts     # Planted bug: flat roles assumption
+│   └── user-dashboard/               # Frontend demo (Rule 7)
+│       └── src/components/            # Planted bug: visual-only role failure
 └── docs/
     ├── rules-reference.md             # Detailed rule breakdown
     └── hook-architecture.md           # Hook internals + failure modes
