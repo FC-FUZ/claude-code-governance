@@ -1,6 +1,6 @@
-# Claude Code Governance — Persistent Context, Multi-Model Reviews, and Security Gates for Claude Code in VS Code
+# Claude Code Governance — Persistent Context, Multi-Model Reviews, Security Gates, and Browser Verification for Claude Code in VS Code
 
-> Stop losing work to context compaction. Stop fixing the same bug three times. Give Claude Code a memory, a second opinion, and a security conscience — zero configuration, fully automatic.
+> Stop losing work to context compaction. Stop fixing the same bug three times. Stop shipping UI bugs that only exist in the browser. Give Claude Code a memory, a second opinion, a security conscience, and visual proof — zero configuration, fully automatic.
 
 <!-- TODO: Add demo GIF here showing WIP recovery + council consultation -->
 <!-- ![Demo](docs/assets/demo.gif) -->
