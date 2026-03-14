@@ -1,15 +1,18 @@
 # Hook Architecture
 
-How the WIP lifecycle hooks work under the hood.
+How the governance hooks work under the hood.
 
 ## Overview
 
-Claude Code supports hooks -- shell commands that execute in response to lifecycle events. This framework uses two hook events:
+Claude Code supports hooks -- shell commands that execute in response to lifecycle events. This framework uses five hook events across three rules:
 
-| Event | When It Fires | Our Script |
-|-------|---------------|------------|
-| `SessionStart` | Beginning of every new conversation | `rehydrate-wip.sh` |
-| `PreCompact` | Before context window compression | `checkpoint-wip.sh` |
+| Event | When It Fires | Script | Rule |
+|-------|---------------|--------|------|
+| `SessionStart` | Beginning of every new conversation | `rehydrate-wip.sh` | 2: WIP Lifecycle |
+| `PreCompact` | Before context window compression | `checkpoint-wip.sh` | 2: WIP Lifecycle |
+| `PreToolUse` | Before Edit/Write/ExitPlanMode | `gate-fix-attempt.py`, `gate-plan-exit.py` | 1: Council |
+| `PostToolUse` | After Edit/Write completes | `mark-browser-verify-pending.py` | 7: Browser Gate |
+| `Stop` | When Claude tries to complete its turn | `gate-browser-verify.py` | 7: Browser Gate |
 
 ## SessionStart: Rehydrate
 
@@ -133,3 +136,65 @@ Hooks are configured in `~/.claude/settings.json`:
 - `matcher: "*"` -- fires for all conversations (can be scoped to specific paths)
 - `timeout: 15` -- 15-second maximum execution time
 - `type: "command"` -- executes as a shell command and reads stdout as JSON
+
+## PostToolUse: Mark Browser Verify Pending (Rule 7)
+
+### Flow
+```
+Claude edits/writes a file
+  -> PostToolUse hook fires: python ~/.claude/scripts/mark-browser-verify-pending.py
+    -> Extract file_path from toolInput
+    -> Check if path matches frontend patterns (e.g. src/**/*.tsx)
+    -> If frontend file: set frontend_dirty=true in state file
+    -> If not frontend: no-op
+  -> Returns {"continue": true}
+```
+
+### State File
+`~/.claude/state/browser-verify.json`:
+```json
+{
+  "frontend_dirty": true,
+  "touched_at": "2026-03-14T15:30:00Z",
+  "verified_at": null,
+  "touched_paths": ["src/components/Chart.tsx"],
+  "verification_type": null
+}
+```
+
+### Frontend Pattern Matching
+Files that trigger the dirty flag (configurable in script):
+- `overwatch-dashboard/src/` (or any project-specific src pattern)
+- `pbi-chat-visual/src/`
+
+Files excluded (never trigger):
+- `.test.`, `.spec.`, `__tests__`, `.d.ts`, `types/`, `README`, `.md`
+
+## Stop: Browser Verification Gate (Rule 7)
+
+### Flow
+```
+Claude tries to complete its turn
+  -> Stop hook fires: python ~/.claude/scripts/gate-browser-verify.py
+    -> Read state file: is frontend_dirty?
+    -> If not dirty: allow (exit 0)
+    -> If dirty: scan transcript for verification evidence
+      -> Look for browser_navigate + browser_screenshot (Playwright MCP)
+      -> Look for browser_navigate + browser_snapshot (DOM-only fallback)
+      -> Look for "playwright test" in Bash commands (CLI fallback)
+    -> If evidence found: clear dirty flag, allow (exit 0)
+    -> If no evidence: BLOCK (exit 2 with reason)
+  -> Claude is forced to verify before completing
+```
+
+### Blocking Behavior
+When the Stop hook returns exit code 2 with a `"decision": "block"` JSON payload, Claude Code prevents Claude from ending its turn and shows the reason. This forces Claude to perform browser verification before it can report completion.
+
+### Failure Modes (Rule 7 specific)
+
+| Failure | Behavior |
+|---------|----------|
+| State file missing/corrupt | Defaults to `frontend_dirty: false`, allows completion |
+| Transcript unreadable | Allows completion (avoids blocking on hook errors) |
+| Playwright MCP unavailable | Claude must fall back to `npx playwright test` CLI |
+| Emergency bypass needed | Set `CLAUDE_BYPASS_BROWSER_VERIFY=1` env var |

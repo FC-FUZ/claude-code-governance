@@ -27,7 +27,8 @@ Claude Code is the best AI coding assistant available — but long sessions have
 - **Cross-project memory that actually persists** — architectural decisions, coding conventions, and project summaries are stored in Supermemory and queried automatically when planning new builds. Claude knows what you built last month.
 - **Security reviews you can't forget to run** — auth, crypto, SQL, and credential-handling code automatically triggers Trail of Bits analysis. Critical findings require multi-model validation before the fix ships.
 - **Graceful degradation, not graceful failure** — if Supermemory, OpenRouter, or Trail of Bits is down, the framework logs it, tells you, and keeps working. No service dependency blocks your session.
-- **40% fewer tokens than the naive approach** — consolidated from 10 rules to 6 through council-validated architecture review. Every token in `CLAUDE.md` earns its keep.
+- **Frontend changes verified visually, not just compiled** — a Stop hook blocks Claude from reporting completion until it takes a browser screenshot via Playwright MCP. TypeScript passing doesn't mean the UI works. Emergency bypass available.
+- **40% fewer tokens than the naive approach** — consolidated through council-validated architecture review. Every token in `CLAUDE.md` earns its keep.
 
 ---
 
@@ -40,9 +41,10 @@ Claude Code is the best AI coding assistant available — but long sessions have
 | Bug fix assistance | Single model, can loop | Multi-model council after 2 failures |
 | Plan review | Self-review only | GPT + Gemini validate before execution |
 | Security enforcement | Manual / opt-in | Automatic on sensitive code paths |
+| Frontend verification | "It compiles" = done | Browser screenshot required before completion |
 | Convention tracking | Per-session only | Persistent across all projects |
 
-Nothing else in the Claude Code ecosystem combines hooks, multi-model orchestration, and persistent memory into a single governance layer. Most Claude Code customizations stop at `CLAUDE.md` rules — this framework makes those rules **enforceable and automatic**.
+Nothing else in the Claude Code ecosystem combines hooks, multi-model orchestration, persistent memory, and visual verification into a single governance layer. Most Claude Code customizations stop at `CLAUDE.md` rules — this framework makes those rules **enforceable and automatic**.
 
 ---
 
@@ -148,27 +150,34 @@ Finding: HIGH — JWT secret loaded from environment without validation
 │                                                         │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
 │  │ SessionStart │  │  PreCompact  │  │   CLAUDE.md  │  │
-│  │    Hook      │  │    Hook      │  │   (6 Rules)  │  │
+│  │    Hook      │  │    Hook      │  │   (7 Rules)  │  │
 │  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  │
 │         │                 │                  │          │
 │         ▼                 ▼                  ▼          │
 │  ┌─────────────────────────────────────────────────┐    │
 │  │              Skills Layer                        │    │
 │  │  ┌───────────┐ ┌────────────┐ ┌──────────────┐  │    │
-│  │  │  Council   │ │ Supermemory│ │  Security    │  │    │
-│  │  │ (OpenRouter│ │ (Company   │ │ (Trail of    │  │    │
-│  │  │  fan-out)  │ │  Memory)   │ │  Bits)       │  │    │
-│  │  └─────┬─────┘ └─────┬──────┘ └──────┬───────┘  │    │
-│  └────────┼──────────────┼───────────────┼──────────┘    │
-│           ▼              ▼               ▼               │
-│    ┌────────────┐  ┌──────────┐  ┌─────────────┐       │
-│    │GPT / Gemini│  │Supermemory│  │Trail of Bits│       │
-│    │via OpenRouter│ │  API     │  │  Analyzers  │       │
-│    └────────────┘  └──────────┘  └─────────────┘       │
+│  │  ┌───────────┐ ┌────────────┐ ┌────────────┐  │    │
+│  │  │  Council   │ │ Supermemory│ │  Security  │  │    │
+│  │  │ (OpenRouter│ │ (Company   │ │ (Trail of  │  │    │
+│  │  │  fan-out)  │ │  Memory)   │ │  Bits)     │  │    │
+│  │  └─────┬─────┘ └─────┬──────┘ └─────┬──────┘  │    │
+│  └────────┼──────────────┼──────────────┼─────────┘    │
+│           ▼              ▼              ▼               │
+│    ┌────────────┐  ┌──────────┐  ┌─────────────┐      │
+│    │GPT / Gemini│  │Supermemory│  │Trail of Bits│      │
+│    │via OpenRouter│ │  API     │  │  Analyzers  │      │
+│    └────────────┘  └──────────┘  └─────────────┘      │
+│                                                        │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │           Browser Verification (Rule 7)          │   │
+│  │  PostToolUse → marks dirty │ Stop → blocks turn  │   │
+│  │  Playwright MCP / CLI for visual proof            │   │
+│  └─────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────┘
 ```
 
-## The 6 Rules
+## The 7 Rules
 
 | # | Rule | Trigger | What It Does |
 |---|------|---------|-------------|
@@ -178,6 +187,7 @@ Finding: HIGH — JWT secret loaded from environment without validation
 | 4 | **Convention Capture** | User states a decision | Stores architectural decisions with rationale |
 | 5 | **Build Completion** | Working build confirmed | Stores structured project summary |
 | 6 | **Security Gate** | Sensitive code touched | Trail of Bits analysis + council validation |
+| 7 | **Browser Verification Gate** | Frontend files modified | Blocks completion until browser screenshot taken |
 
 See [docs/rules-reference.md](docs/rules-reference.md) for the full breakdown of each rule.
 
@@ -187,16 +197,29 @@ See [docs/rules-reference.md](docs/rules-reference.md) for the full breakdown of
 
 ```
 claude-code-governance/
-├── README.md                 # You are here
-├── CLAUDE.md                 # The 6 governance rules (copy to ~/.claude/)
-├── install.sh                # One-command installer
+├── README.md                          # You are here
+├── CLAUDE.md                          # The 7 governance rules (copy to ~/.claude/)
+├── install.sh                         # One-command installer
+├── settings.json                      # Full hook config (copy to ~/.claude/)
+├── settings-example.json              # Hook config template (minimal)
 ├── scripts/
-│   ├── rehydrate-wip.sh      # SessionStart hook — recovers WIP
-│   └── checkpoint-wip.sh     # PreCompact hook — saves WIP
-├── settings-example.json     # Hook config template
+│   ├── rehydrate-wip.sh               # SessionStart hook — recovers WIP (Rule 2)
+│   ├── checkpoint-wip.sh              # PreCompact hook — saves WIP (Rule 2)
+│   ├── gate-fix-attempt.py            # PreToolUse hook — tracks bug fix attempts (Rule 1)
+│   ├── gate-plan-exit.py              # PreToolUse hook — validates council ran (Rule 1)
+│   ├── mark-browser-verify-pending.py # PostToolUse hook — marks frontend dirty (Rule 7)
+│   ├── gate-browser-verify.py         # Stop hook — blocks until verified (Rule 7)
+│   └── setup-shared-env.sh            # Shared environment setup
+├── skills/
+│   ├── council/                       # Multi-model council (OpenRouter)
+│   │   ├── SKILL.md
+│   │   ├── references/council_config.json
+│   │   └── scripts/council.py
+│   └── supermemory/                   # Company memory (Supermemory API)
+│       └── scripts/company_memory.py
 └── docs/
-    ├── rules-reference.md    # Detailed rule breakdown
-    └── hook-architecture.md  # Hook internals + failure modes
+    ├── rules-reference.md             # Detailed rule breakdown
+    └── hook-architecture.md           # Hook internals + failure modes
 ```
 
 ---

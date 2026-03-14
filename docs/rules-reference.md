@@ -127,3 +127,55 @@ Mandatory security review for code that handles sensitive operations.
 2. Cross-reference with historical vulnerabilities
 3. Council validation for Critical/High findings
 4. Fix applied only after validation
+
+---
+
+## Rule 7: Browser Verification Gate
+
+### Purpose
+Mandatory visual verification of frontend changes in a real browser before Claude reports completion. Prevents "it compiles, ship it" failures where TypeScript passes but the UI is broken.
+
+### Hook Architecture
+Uses a two-hook system:
+- **PostToolUse** (`mark-browser-verify-pending.py`): Fires after every Edit/Write. If the edited file matches frontend patterns (e.g. `src/**/*.tsx`), marks `~/.claude/state/browser-verify.json` as "dirty"
+- **Stop** (`gate-browser-verify.py`): Fires when Claude tries to complete its turn. If frontend files are dirty and no browser verification evidence exists in the transcript, **blocks Claude from stopping**
+
+### Verification Evidence (checked by Stop hook)
+The hook scans the conversation transcript for:
+1. **Playwright MCP tools**: `browser_navigate` + `browser_screenshot` (full visual proof)
+2. **Playwright MCP fallback**: `browser_navigate` + `browser_snapshot` (DOM text only — allowed with warning)
+3. **Playwright CLI**: `npx playwright test` in a Bash command (fallback)
+
+### Sub-rules
+
+#### 7a: Verification Protocol
+Every frontend change requires: dev server running, `browser_navigate`, wait for async rendering, `browser_screenshot`, check console errors.
+
+#### 7b: Session Startup Smoke Test
+Before starting frontend work: start dev server, navigate MCP to app, confirm page loads and renders.
+
+#### 7c: Chart & Dashboard Special Rule
+Backend success / TypeScript pass / valid JSON do NOT prove visual rendering. Charts require screenshot + canvas dimension verification.
+
+#### 7d: Evidence Report Format
+Every completion must include: URL tested, screenshot taken (yes/no), console errors (count), charts rendered (count + dimensions), test suite results, verdict (PASS/FAIL/PARTIAL).
+
+#### 7e: Scope Guard (Does NOT trigger on)
+- `.test.` / `.spec.` files
+- `.d.ts` type declaration files
+- `types/` directory
+- README/docs files
+- Config-only changes
+
+### Emergency Bypass
+```bash
+CLAUDE_BYPASS_BROWSER_VERIFY=1
+```
+
+### Failure Modes
+| Failure | Behavior |
+|---------|----------|
+| Playwright MCP unavailable | Claude announces, falls back to `npx playwright test` via Bash |
+| State file missing/corrupt | Defaults to `frontend_dirty: false`, allows completion |
+| Transcript unreadable | Allows completion (avoids blocking on hook errors) |
+| Browser-native dialogs | Claude reports verification as PARTIAL, describes what needs human confirmation |

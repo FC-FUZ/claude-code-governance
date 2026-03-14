@@ -2,7 +2,7 @@
 
 ## Graceful Degradation Policy
 
-If Supermemory, OpenRouter, or Trail of Bits APIs timeout or fail:
+If Supermemory, OpenRouter, Trail of Bits APIs, or Playwright MCP timeout or fail:
 1. Log error to console
 2. Notify user: "[Service] unavailable — proceeding with local context only."
 3. Continue without the failed service. Do NOT retry in a loop.
@@ -246,8 +246,9 @@ Confirm after storing: "Stored in company memory: [brief summary]"
 
 After completing a working build (user confirms it works), you MUST:
 
-1. Ask: "Should I store a summary of this build in company memory?"
-2. If yes, generate and store a structured summary:
+1. If the build involved frontend changes, a Browser Verification Report (Rule 7d format) must appear in the conversation before proceeding with memory storage.
+2. Ask: "Should I store a summary of this build in company memory?"
+3. If yes, generate and store a structured summary:
 ```bash
 python ~/.claude/skills/supermemory/scripts/company_memory.py store \
   --content "Project: <name>
@@ -263,9 +264,9 @@ Repo Path: <local path or repo URL>" \
   --type project-summary \
   --tags "<framework>,<language>,<key-tech>"
 ```
-3. Store any new conventions established during the build in the `conventions` container.
-4. Store any integration points with other projects as notes in both project containers.
-5. Purge stale WIP via Rule 2d.
+4. Store any new conventions established during the build in the `conventions` container.
+5. Store any integration points with other projects as notes in both project containers.
+6. Purge stale WIP via Rule 2d.
 
 ---
 
@@ -303,3 +304,51 @@ Is this fix correct and complete? Are there additional attack vectors we're miss
 - Configuration changes that don't affect security boundaries
 
 This is NON-NEGOTIABLE. If you touch auth, crypto, input parsing, SQL, or credential-handling code, you must run the security skill.
+
+---
+
+## Rule 7: Browser Verification Gate (MANDATORY)
+
+When you modify frontend files (e.g. `src/**/*.tsx`, `src/**/*.ts`, `src/**/*.css`), you MUST visually verify changes in a real browser before reporting completion. A Stop hook enforces this — you will be blocked from completing your turn if frontend edits lack browser verification evidence.
+
+### 7a: Verification Protocol
+For every frontend change, before reporting completion:
+1. Ensure dev server is running (e.g. `npm run dev`)
+2. Use `browser_navigate` to open the local dev URL
+3. Wait 2-3 seconds for async rendering to settle
+4. Use `browser_screenshot` to capture the affected view
+5. Use `browser_console_messages` or `browser_snapshot` to check for errors
+6. For chart changes: verify canvas dimensions are non-zero
+7. For chart changes: also run existing Playwright/Vitest test suite
+
+### 7b: Session Startup Smoke Test
+When starting a session involving frontend work:
+1. Start the dev server
+2. Navigate Playwright MCP to the app via `browser_navigate`
+3. Confirm: page loads, no console errors, navigation works, at least one interactive element renders
+4. Only then begin making changes
+
+### 7c: Chart & Dashboard Special Rule
+Backend success, valid JSON, passing tsc, or successful API responses do NOT prove visual rendering. For any chart/dashboard change:
+- Take a `browser_screenshot` showing the rendered chart with data
+- Use `browser_snapshot` to inspect DOM for canvas elements and their dimensions
+- Async chart libraries (ECharts, D3, Recharts) — wait for canvas before screenshotting
+- Run golden/snapshot tests and report pass/fail counts
+
+### 7d: Evidence & Reporting
+Do not say "completed" without a verification report:
+- **URL tested**
+- **Screenshot taken** (yes/no)
+- **Console errors** (count + list)
+- **Charts rendered** (count + canvas dimensions)
+- **Test suite** (pass/fail or "not run")
+- **Limitations**: Playwright MCP cannot verify animations, hover states, Safari/Firefox rendering (headless Chromium only), or browser-native dialogs
+- **Verdict**: PASS / FAIL / PARTIAL
+
+### 7e: Fallback & Scope
+- If Playwright MCP is unavailable, announce immediately. Fall back to `npx playwright test` via Bash. Do not claim E2E validation without either MCP browser tools or Playwright CLI evidence.
+- **Scope guard**: does NOT trigger on `.test.`/`.spec.` files, `.d.ts`, `types/` directory, README/docs, or config-only changes.
+- Use Playwright MCP (`browser_navigate`, `browser_screenshot`, `browser_snapshot`, `browser_click`) for ad-hoc visual verification. Use existing test suites for regression testing.
+- If a flow depends on browser-native dialogs, OS-level prompts, or anything Playwright MCP cannot reliably observe, explicitly say that verification was partial and describe what still requires human confirmation.
+
+This is NON-NEGOTIABLE. The Stop hook (`gate-browser-verify.py`) enforces this automatically. Emergency bypass: `CLAUDE_BYPASS_BROWSER_VERIFY=1`.
