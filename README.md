@@ -69,15 +69,19 @@ export SUPERMEMORY_API_KEY="your-key"
 
 ```bash
 # Copy hook scripts
-mkdir -p ~/.claude/scripts
-cp scripts/*.sh ~/.claude/scripts/
-chmod +x ~/.claude/scripts/*.sh
+mkdir -p ~/.claude/scripts ~/.claude/state
+cp scripts/*.sh scripts/*.py ~/.claude/scripts/
+chmod +x ~/.claude/scripts/*.sh ~/.claude/scripts/*.py
 
 # Copy governance rules
 cp CLAUDE.md ~/.claude/CLAUDE.md
 
-# Merge hooks into your settings (see settings-example.json)
-# Add SessionStart + PreCompact hook entries to ~/.claude/settings.json
+# Copy skills
+cp -r skills/council ~/.claude/skills/council
+cp -r skills/supermemory ~/.claude/skills/supermemory
+cp -r skills/security ~/.claude/skills/security
+
+# Merge hooks from settings.json into your ~/.claude/settings.json
 ```
 
 </details>
@@ -201,7 +205,6 @@ claude-code-governance/
 ├── CLAUDE.md                          # The 7 governance rules (copy to ~/.claude/)
 ├── install.sh                         # One-command installer
 ├── settings.json                      # Full hook config (copy to ~/.claude/)
-├── settings-example.json              # Hook config template (minimal)
 ├── scripts/
 │   ├── rehydrate-wip.sh               # SessionStart hook — recovers WIP (Rule 2)
 │   ├── checkpoint-wip.sh              # PreCompact hook — saves WIP (Rule 2)
@@ -215,8 +218,11 @@ claude-code-governance/
 │   │   ├── SKILL.md
 │   │   ├── references/council_config.json
 │   │   └── scripts/council.py
-│   └── supermemory/                   # Company memory (Supermemory API)
-│       └── scripts/company_memory.py
+│   ├── supermemory/                   # Company memory (Supermemory API)
+│   │   ├── SKILL.md
+│   │   └── scripts/company_memory.py
+│   └── security/                      # Trail of Bits security analysis
+│       └── SKILL.md
 ├── demo/
 │   ├── README.md                      # Recording script + setup guide
 │   ├── seed-wip.sh                    # Seeds all 7 demo states
@@ -234,7 +240,6 @@ claude-code-governance/
 ## Roadmap
 
 - [ ] Demo GIF / screen recording for README
-- [ ] `install.sh` one-command installer script
 - [ ] Publish skills as standalone repos (council, supermemory, security)
 - [ ] VS Code extension wrapper for one-click install
 - [ ] Dashboard UI for council performance analytics

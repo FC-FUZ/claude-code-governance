@@ -96,7 +96,8 @@ def check_council_log(cwd):
     if not log_path.exists():
         return False
 
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=2)
+    cutoff_hours = int(os.environ.get("GOVERNANCE_COUNCIL_HOURS", "4"))
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=cutoff_hours)
 
     try:
         for line in log_path.read_text(encoding="utf-8").splitlines():

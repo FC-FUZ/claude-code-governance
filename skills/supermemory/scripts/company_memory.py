@@ -166,6 +166,10 @@ def cmd_store(args):
     }
     if args.tags:
         metadata["tags"] = [t.strip() for t in args.tags.split(",")]
+    if args.dynamic:
+        metadata["persistence"] = "dynamic"
+    elif args.static:
+        metadata["persistence"] = "static"
 
     # For static facts, use the memories endpoint directly
     if args.static:
@@ -416,9 +420,10 @@ def main():
     store_parser = subparsers.add_parser("store", help="Store a memory")
     store_parser.add_argument("--content", required=True, help="Memory content text")
     store_parser.add_argument("--container", required=True, help="Container tag (company, conventions, decisions, project_*)")
-    store_parser.add_argument("--type", required=True, choices=["convention", "decision", "stack", "project-summary", "pattern", "note"], help="Memory type")
+    store_parser.add_argument("--type", required=True, choices=["convention", "decision", "stack", "project-summary", "pattern", "note", "wip", "security-incident"], help="Memory type")
     store_parser.add_argument("--tags", help="Comma-separated tags")
     store_parser.add_argument("--static", action="store_true", help="Mark as permanent/static fact")
+    store_parser.add_argument("--dynamic", action="store_true", help="Mark as ephemeral/dynamic (e.g. WIP state)")
 
     # query
     query_parser = subparsers.add_parser("query", help="Search company memory")

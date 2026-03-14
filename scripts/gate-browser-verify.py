@@ -61,6 +61,7 @@ def clear_state():
         "verification_type": None,
     }
     try:
+        STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
         STATE_FILE.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
     except OSError:
         pass
@@ -201,12 +202,12 @@ def main():
         "BLOCKED by Rule 7: Browser verification required.\n"
         f"Frontend files modified:\n  - {paths_str}\n\n"
         "You MUST verify with Playwright MCP before completing:\n"
-        "1. Ensure dev server is running (npm run dev on port 5173)\n"
-        "2. browser_navigate to http://localhost:5173\n"
+        "1. Ensure dev server is running (e.g. npm run dev)\n"
+        "2. browser_navigate to the local dev URL\n"
         "3. browser_screenshot of the affected view\n"
         "4. Report verification results using Rule 7d format\n\n"
         "If Playwright MCP is unavailable, run:\n"
-        "  cd overwatch-dashboard && npx playwright test\n\n"
+        "  npx playwright test\n\n"
         "To bypass (emergency only): set CLAUDE_BYPASS_BROWSER_VERIFY=1"
     )
 

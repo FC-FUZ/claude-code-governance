@@ -14,9 +14,13 @@ from pathlib import Path
 STATE_FILE = Path.home() / ".claude" / "state" / "browser-verify.json"
 
 FRONTEND_PATTERNS = [
-    "overwatch-dashboard/src/",
-    "pbi-chat-visual/src/",
+    "/src/components/",
+    "/src/pages/",
+    "/src/views/",
+    "/src/app/",
 ]
+
+FRONTEND_EXTENSIONS = [".tsx", ".jsx", ".vue", ".svelte", ".css", ".scss"]
 
 EXCLUDE_PATTERNS = [
     ".test.", ".spec.", "__tests__", ".d.ts",
@@ -36,11 +40,10 @@ def is_frontend_file(file_path):
     for exc in EXCLUDE_PATTERNS:
         if exc in norm:
             return False
-    # Check frontend patterns
-    for pat in FRONTEND_PATTERNS:
-        if pat in norm:
-            return True
-    return False
+    # Check frontend patterns (path must match a pattern AND have a frontend extension)
+    has_pattern = any(pat in norm for pat in FRONTEND_PATTERNS)
+    has_extension = any(norm.endswith(ext) for ext in FRONTEND_EXTENSIONS)
+    return has_pattern and has_extension
 
 
 def read_state():
