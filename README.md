@@ -296,9 +296,6 @@ The framework degrades gracefully. Without Supermemory, WIP recovery is disabled
 **Q: Can I use this with project-specific CLAUDE.md files?**
 Yes. The governance rules go in your global `~/.claude/CLAUDE.md`. Project-specific rules in your repo's `CLAUDE.md` extend or override them. They compose, not conflict.
 
-**Q: How much does the council cost?**
-Each consultation makes 3 API calls via OpenRouter (GPT Codex, Gemini, and Kimi K2.5 in parallel). At typical token counts, this is $0.02-0.08 per consultation. The council only fires on failed bug fixes and plan validation — not on every message.
-
 **Q: Will this work on Mac/Linux?**
 Yes. The hook scripts are standard bash. Tested on Windows (Git Bash), macOS, and Ubuntu.
 
